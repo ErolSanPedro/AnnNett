@@ -1,0 +1,375 @@
+{% load static %}
+<!DOCTYPE html>
+<!-- saved from url=(0167){% static 'startbootstrap-sb-admin-2-gh-pages/startbootstrap-sb-admin-2-gh-pages/SB%20Admin%202%20-%20Tables.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+  
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <title>AnnNet</title>
+
+  <!-- Custom fonts for this template -->
+  <link href="{% static 'vendor/fontawesome-free/css/all.min.css' %}" rel="stylesheet" type="text/css">
+  <link type="text/css" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
+
+  <!-- Custom styles for this template -->
+  <link type="text/css" href="{% static 'css/sb-admin-2.min.css' %}" rel="stylesheet">
+
+  <!-- Custom styles for this page -->
+  <link type="text/css" href="{% static 'vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+
+</head>
+
+<body id="page-top">
+
+  <!-- Page Wrapper -->
+  <div id="wrapper">
+
+    <!-- Sidebar -->
+    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+
+      <!-- Sidebar - Brand -->
+      <a class="sidebar-brand d-flex align-items-center justify-content-center" href="#index.html">
+        <div class="sidebar-brand-icon rotate-n-15">
+          <i class="fas fa-laugh-wink"></i>
+        </div>
+        <div class="sidebar-brand-text mx-3">AnnNet <sup>2</sup></div>
+      </a>
+
+      <!-- Divider -->
+      <hr class="sidebar-divider my-0">
+
+      <!-- Nav Item - Dashboard -->
+      <li class="nav-item active">
+        <a class="nav-link" href="{% url 'settings' %}">
+          <i class="fas fa-fw fa-tachometer-alt"></i>
+          <span>Dashboard</span></a>
+      </li>
+
+      <!-- Nav Item - Tables -->
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'indexSB' %}">
+          <i class="fas fa-fw fa-table"></i>
+          <span>Databases</span></a>
+      </li>
+
+      <!-- Divider -->
+      <hr class="sidebar-divider d-none d-md-block">
+
+      <!-- Sidebar Toggler (Sidebar) -->
+      <div class="text-center d-none d-md-inline">
+        <button class="rounded-circle border-0" id="sidebarToggle"></button>
+      </div>
+
+    </ul>
+    <!-- End of Sidebar -->
+
+    <!-- Content Wrapper -->
+    <div id="content-wrapper" class="d-flex flex-column">
+
+      <!-- Main Content -->
+      <div id="content">
+
+        <!-- Topbar -->
+        
+        <!-- End of Topbar -->
+
+        <!-- Begin Page Content -->
+        <div class="container-fluid">
+
+          <!-- Page Heading -->
+          <h1 class="h3 mb-2 text-gray-800">Settings</h1>
+          
+          <div class="col-xl-8 card">
+            <div class="kt-portlet kt-portlet--height-fluid kt-portlet--mobile ">
+              <br>
+              <!--begin::Portlet-->
+              <!--begin::Form-->
+              <div class="kt-portlet__body">
+                <div class="kt-section__body">
+                  <div class="form-group row">
+                    <label class="col-lg-3 col-form-label">Reset Time:</label>
+                    <div class="col-lg-6">
+                      <input type="number" id="reset-time" class="form-control" value="{{ reset_time }}" min="1" max="999">
+                      <span class="form-text text-muted">Current Settings: <span class="kt-font-bold"><span id="resetTimeValue">{{ reset_time }}</span> day{% if reset_time > 1 %}s{% endif %}</span></span>
+                    </div>
+                  </div>
+
+                  <hr class="sidebar-divider">
+
+                  <div class="form-group row">
+                    <label class="col-lg-3 col-form-label">Base Penalty Time:</label>
+                    <div class="col-lg-6">
+                      <input type="number" id="penalty-time" class="form-control" value="{{ base_penalty }}" min="1" max="999">
+                      <span class="form-text text-muted">Current Settings: <span class="kt-font-bold"><span id="penaltyValue">{{ base_penalty }}</span> minute{% if base_penalty > 1 %}s{% endif %}</span></span>
+                    </div>
+                  </div>
+
+                  <hr class="sidebar-divider">
+
+                  <div class="form-group row">
+                    <label class="col-lg-3 col-form-label">Update Array Size:</label>
+                    <div class="col-lg-6">
+                      <input type="number" id="lift-size" class="form-control" value="{{ lift_size }}" min="1" max="9999">
+                      <span class="form-text text-muted">Current Settings: <span class="kt-font-bold"><span id="liftSizeValue">{{ lift_size }}</span> row{% if lift_size > 1 %}s{% endif %}</span></span>
+                    </div>
+                  </div>  
+
+                  <hr class="sidebar-divider">
+
+                  <div class="form-group row">
+                    <label class="col-lg-3 col-form-label">Update Timer:</label>
+                    <div class="col-lg-6">
+                      <input type="number" id="lift-timer" class="form-control" value="{{ lift_timer }}" min="1" max="999">
+                      <span class="form-text text-muted">Current Settings: <span class="kt-font-bold"><span id="liftTimerValue">{{ lift_timer }}</span> second{% if lift_timer > 1 %}s{% endif %}</span></span>
+                    </div>
+                  </div>  
+
+                  <hr class="sidebar-divider">
+
+                  <div class="form-group">
+                    <label>ACL Sort Mode:</label>
+                    <div class="row">
+                      <div class="col-lg-4">
+                        <label class="kt-option kt-option kt-option--plain">
+                        <span class="kt-option__control">
+                        <span class="kt-radio kt-radio--check-bold">
+                        <input type="radio" id="mruRadio" name="config" {% if sort_mode == 'mru' %}checked{% endif %}>
+                        <span></span>
+                        </span>
+                        </span>
+
+                        <span class="kt-option__label">
+                        <span class="kt-option__head">
+                        <span class="kt-option__title">
+                        MRU         
+                        </span>                                              
+                        </span>
+                        <span class="kt-option__body">
+                        Most Recently Used                         
+                        </span>
+                        </span>   
+                        </label> 
+                      </div>
+                      <div class="col-lg-4">
+                        <label class="kt-option kt-option kt-option--plain">
+                        <span class="kt-option__control">
+                        <span class="kt-radio kt-radio--check-bold">
+                        <input type="radio" id="lruRadio" name="config" {% if sort_mode == 'lru' %}checked{% endif %}>
+                        <span></span>
+                        </span>
+                        </span>
+                        <span class="kt-option__label">
+                        <span class="kt-option__head">
+                        <span class="kt-option__title">
+                        LRU         
+                        </span>                                              
+                        </span>
+                        <span class="kt-option__body">
+                        Least Recently Used                        
+                        </span>
+                        </span>   
+                        </label> 
+                      </div>
+                      <div class="col-lg-4">
+                        <label class="kt-option kt-option kt-option--plain">
+                        <span class="kt-option__control">
+                        <span class="kt-radio kt-radio--check-bold">
+                        <input type="radio" id="rrRadio" name="config" {% if sort_mode == 'rr' %}checked{% endif %}>
+                        <span></span>
+                        </span>
+                        </span>
+                        <span class="kt-option__label">
+                        <span class="kt-option__head">
+                        <span class="kt-option__title">
+                        RR        
+                        </span>                                              
+                        </span>
+                        <span class="kt-option__body">
+                        Random Replacement                       
+                        </span>
+                        </span>   
+                        </label> 
+                      </div>                                    
+                    </div>
+                    <div class="row">
+                      <div class="col-lg-4">
+                        <label class="kt-option kt-option kt-option--plain">
+                        <span class="kt-option__control">
+                        <span class="kt-radio kt-radio--check-bold">
+                        <input type="radio" id="mfuRadio" name="config" {% if sort_mode == 'mfu' %}checked{% endif %}>
+                        <span></span>
+                        </span>
+                        </span>
+                        <span class="kt-option__label">
+                        <span class="kt-option__head">
+                        <span class="kt-option__title">
+                        MFU         
+                        </span>                                              
+                        </span>
+                        <span class="kt-option__body">
+                        Most Frequently Used                         
+                        </span>
+                        </span>   
+                        </label> 
+                      </div>
+                      <div class="col-lg-4">
+                        <label class="kt-option kt-option kt-option--plain">
+                        <span class="kt-option__control">
+                        <span class="kt-radio kt-radio--check-bold">
+                        <input type="radio" id="lfuRadio" name="config" {% if sort_mode == 'lfu' %}checked{% endif %}>
+                        <span></span>
+                        </span>
+                        </span>
+                        <span class="kt-option__label">
+                        <span class="kt-option__head">
+                        <span class="kt-option__title">
+                        LFU         
+                        </span>                                              
+                        </span>
+                        <span class="kt-option__body">
+                        Least Frequently Used                        
+                        </span>
+                        </span>   
+                        </label> 
+                      </div>
+                    </div>  
+                    <span class="form-text text-muted">Current Settings: <span class="kt-font-bold" id="sortValue">{{ sort_mode|upper }}</span></span>                                  
+                  </div>
+                </div>
+              </div>
+              
+              <hr class="sidebar-divider">
+
+              <div class="kt-portlet__foot">
+                <div class="kt-form__actions">
+                  <div class="row">
+                    <div class="col-lg-3"></div>
+                    <div class="col-lg-6">
+                      <button onclick="saveSettings()" class="btn btn-success">Submit</button>
+                      <button type="reset" class="btn btn-secondary">Cancel</button>
+                    </div>
+                  </div>
+                  <br>
+                </div>
+              </div>
+            <!--end::Form-->
+            </div>
+          </div>
+
+
+        <!-- /.container-fluid -->
+
+      </div>
+      <!-- End of Main Content -->
+
+      <!-- Footer -->
+      <footer class="sticky-footer bg-white">
+        <div class="container my-auto">
+          <div class="copyright text-center my-auto">
+            <span>Copyright © Your Website 2019</span>
+          </div>
+        </div>
+      </footer>
+      <!-- End of Footer -->
+
+    </div>
+    <!-- End of Content Wrapper -->
+
+  </div>
+  <!-- End of Page Wrapper -->
+  <a class="scroll-to-top rounded" href="#page-top">
+    <i class="fas fa-angle-up"></i>
+  </a>
+  <!-- Logout Modal-->
+
+  <!-- Bootstrap core JavaScript-->
+  <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
+  <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+  <!-- Core plugin JavaScript-->
+  <script src="{% static 'vendor/jquery-easing/jquery.easing.min.js' %}"></script>
+
+  <!-- Custom scripts for all pages-->
+  <script src="{% static 'js/sb-admin-2.min.js' %}"></script>
+
+  <!-- Page level plugins -->
+  <script src="{% static 'vendor/datatables/jquery.dataTables.min.js' %}"></script>
+  <script src="{% static 'vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
+
+<!--   Page level custom scripts -->
+  
+  <script src="{% static 'js/demo/datatables-demo.js' %}"></script>
+
+  <script type="text/javascript">
+    $(document).ready( function () {
+      $('table.display').DataTable();
+    } );
+  </script>
+
+  <script type="text/javascript">
+    function saveSettings(){
+        // verify if the same values
+        var old_base_penalty = $('#penaltyValue').text();
+        var old_reset_time = $('#resetTimeValue').text();
+        var old_lift_size = $('#liftSizeValue').text();
+        var old_lift_timer = $('#liftTimerValue').text();
+        var old_sort_mode = $('#sortValue').text().toLowerCase();
+
+        var new_base_penalty = $('#penalty-time').val();
+        var new_reset_time = $('#reset-time').val();
+        var new_lift_size = $('#lift-size').val();
+        var new_lift_timer = $('#lift-timer').val();
+        var new_sort_num;
+
+        if ($("#mruRadio").is(":checked"))
+          new_sort_mode = 'mru';
+        else if ($("#lruRadio").is(":checked")) //bottom to top
+          new_sort_mode = 'lru';
+        else if ($("#rrRadio").is(":checked"))  
+          new_sort_mode = 'rr';
+        else if ($("#mfuRadio").is(":checked")) //first come first serve
+          new_sort_mode = 'mfu';
+        else if ($("#lfuRadio").is(":checked")) // first come first serve
+          new_sort_mode = 'lfu';
+
+        if (old_base_penalty == new_base_penalty && old_reset_time == new_reset_time && old_lift_size == new_lift_size && old_lift_timer == new_lift_timer && old_sort_mode == new_sort_mode)
+          toastr.error("Input values are the same from the previous one.", "Error!");
+        else {
+          $.ajax({
+            type: "POST",
+            url: 'updateconf', 
+            data: { 
+              base_penalty: $('#penalty-time').val(),
+              reset_time: $('#reset-time').val(),
+              lift_size: $('#lift-size').val(),
+              lift_timer: $('#lift-timer').val(),
+              sort_mode: new_sort_mode,
+              csrfmiddlewaretoken: '{{ csrf_token }}',
+            },
+            success:function(data){
+              console.log("hello");
+
+              var res = JSON.parse(data);
+
+              console.log(res['sort_mode']);
+
+              $('#resetTimeValue').text(res['reset_time']);
+              $('#penaltyValue').text(res['base_penalty']);
+              $('#liftSizeValue').text(res['lift_size']);
+              $('#liftTimerValue').text(res['lift_timer']);
+              $('#sortValue').text((res['sort_mode']).toUpperCase());
+
+              // toastr.success("Program has been configured.", "Success!");
+            }
+          });
+        }   
+      }
+
+  </script>>
+
+</body>
+</html>

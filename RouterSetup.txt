@@ -1,0 +1,25 @@
+enable
+conf t
+
+int fa0/0
+ip address 192.168.0.1 255.255.255.0
+no sh
+exit
+
+int fa0/1
+ip address 192.168.1.1 255.255.255.0
+no sh
+exit
+
+router rip
+network 192.168.0.0
+network 192.168.1.0
+exit
+
+ip access-list extended blacklist
+no sh
+exit
+do wr
+
+int fa0/1
+ip access-group blacklist in

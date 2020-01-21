@@ -1,0 +1,16 @@
+{% extends "base_generic.html" %}
+
+{% block content %}
+  <h1>Blacklist Contents</h1>
+  {% if blacklist_list %}
+  <ul>
+    {% for blacklist in blacklist_list %}
+      <li>
+        ({{ blacklist.ipaddress }}) ({{blacklist.host}})
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+    <p>There are no Blacklisted IPs.</p>
+  {% endif %}       
+{% endblock %}
