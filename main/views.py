@@ -11,6 +11,7 @@ import configparser
 import threading
 import serial
 import json
+import re
 
 # Create your views here.
 
@@ -52,10 +53,24 @@ ACLcurrIndx = 0		#The index where Router rules end in PenaltyTable e.g. Penalty_
 	
 i=13
 
-f=open("domains.txt", "r")
+with open("domains.txt","rb") as f:
+	bytes = f.read() # read file as bytes
+	readable_hash = hashlib.md5(bytes).hexdigest()
+
+	
 
 
-f.close()
+with open("domains.txt","r") as f:
+	content = f.readlines()
+	if (content[0] != readable_hash):
+		for con in content:
+			print (con + str(bool(re.findall('[a-zA-Z]', con))))
+					
+				# new_blacklist = Blacklist(ipaddress = con)
+				# new_blacklist.save()
+
+		content.insert(0,readable_hash)
+
 
 #TESTING
 
