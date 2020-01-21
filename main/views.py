@@ -53,23 +53,24 @@ ACLcurrIndx = 0		#The index where Router rules end in PenaltyTable e.g. Penalty_
 	
 i=13
 
-with open("domains.txt","rb") as f:
-	bytes = f.read() # read file as bytes
-	readable_hash = hashlib.md5(bytes).hexdigest()
+# with open("domains.txt","rb") as f:
+# 	bytes = f.read() # read file as bytes
+# 	readable_hash = hashlib.md5(bytes).hexdigest()
 
 	
 
 
-with open("domains.txt","r") as f:
-	content = f.readlines()
-	if (content[0] != readable_hash):
-		for con in content:
-			print (con + str(bool(re.findall('[a-zA-Z]', con))))
-					
-				# new_blacklist = Blacklist(ipaddress = con)
-				# new_blacklist.save()
+# with open("domains.txt","r") as f:
+# 	content = f.readlines()
+# 	if (content[0] != readable_hash):
+# 		for con in content:
+# 			if (not bool(re.findall('[a-zA-Z]', con))):	
+# 				new_blacklist = Blacklist(ipaddress = con)
+# 				new_blacklist.save()
+# 		content.insert(0,readable_hash)
 
-		content.insert(0,readable_hash)
+# with open("domains.txt","w") as f:
+# 	f.writelines(content)
 
 
 #TESTING
