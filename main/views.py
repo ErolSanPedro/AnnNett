@@ -52,10 +52,16 @@ ACLcurrIndx = 0		#The index where Router rules end in PenaltyTable e.g. Penalty_
 	
 i=13
 
-f=open("domains.txt", "r")
+#Blacklist addition
 
 
-f.close()
+with open("domains.txt","r") as f:
+	content = f.readlines()
+	for con in content:
+		if (not bool(re.findall('[a-zA-Z]', con))):	
+			new_blacklist = Blacklist(ipaddress = con)
+			new_blacklist.save()
+		
 
 #TESTING
 
