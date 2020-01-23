@@ -1,0 +1,37 @@
+en
+conf t
+int vlan 10
+no sh
+exit
+
+int vlan 20
+no sh
+exit
+
+int vlan 30
+
+no sh
+exit
+
+int fa0/1
+switchport mode trunk
+no shs
+exit
+
+int fa0/2
+switchport mode access
+switchport access vlan 10
+no sh
+exit
+
+int fa0/3
+switchport mode access
+switchport access vlan 20
+no sh
+exit
+
+int fa0/4
+switchport mode access
+switchport access vlan 30
+no sh
+exit

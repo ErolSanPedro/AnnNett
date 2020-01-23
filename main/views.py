@@ -53,11 +53,7 @@ ACLcurrIndx = 0		#The index where Router rules end in PenaltyTable e.g. Penalty_
 	
 i=13
 
-# with open("domains.txt","rb") as f:
-# 	bytes = f.read() # read file as bytes
-# 	readable_hash = hashlib.md5(bytes).hexdigest()
-
-	
+#Blacklist addition
 
 
 # with open("domains.txt","r") as f:
@@ -67,10 +63,7 @@ i=13
 # 			if (not bool(re.findall('[a-zA-Z]', con))):	
 # 				new_blacklist = Blacklist(ipaddress = con)
 # 				new_blacklist.save()
-# 		content.insert(0,readable_hash)
-
-# with open("domains.txt","w") as f:
-# 	f.writelines(content)
+# 		
 
 
 #TESTING
@@ -603,28 +596,3 @@ def updateAuditTable(request):
 	return HttpResponse(json, content_type='application/json')
 	# return HttpResponse(json.dumps(context))
 
-
-# from main.models import Book, Author, BookInstance, Genre
-
-# def index(request):
-#	  """View function for home page of site."""
-
-#	  # Generate counts of some of the main objects
-#	  num_books = Book.objects.all().count()
-#	  num_instances = BookInstance.objects.all().count()
-	 
-#	  # Available books (status = 'a')
-#	  num_instances_available = BookInstance.objects.filter(status__exact='a').count()
-	 
-#	  # The 'all()' is implied by default.	 
-#	  num_authors = Author.objects.count()
-	 
-#	  context = {
-#			'num_books': num_books,
-#			'num_instances': num_instances,
-#			'num_instances_available': num_instances_available,
-#			'num_authors': num_authors,
-#	  }
-
-#	  # Render the HTML template index.html with the data in the context variable
-#	  return render(request, 'index.html', context=context)
