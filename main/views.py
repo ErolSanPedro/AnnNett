@@ -37,16 +37,28 @@ UPDATE_LIST = []	#List of alrdy existing penalty that needs "status" to be chang
 serialLock = threading.Semaphore()
 
 
-p1 = PENALTY_TABLE.annotate(num=Max('rulenum'))
+p1 = PENALTY_TABLE.annotate(MX=Max('rulenum')).annotate(MN=Min('rulenum'))
 
-if (config['SETTINGS']["sort_mode"] == "lru"):
-	if p1:
-		startingACLnmbr = int(p1[0].num)
-	else:
-		startingACLnmbr = 0
+
+print(p1[0].MX p1[0].MN)
+
+if p1:
+	if (config['SETTINGS']["sort_mode"] == "lru"):
+		startingACLnmbr = int(p1[0].MX)
+	elif (config['SETTINGS']["sort_mode"] == "mru"):
+		startingACLnmbr = int(p1[0].MN)
+	elif (config['SETTINGS']["sort_mode"] == "rr"):
+		startingACLnmbr = int(p1[0].MX)
+	elif (config['SETTINGS']["sort_mode"] == "mfu"):
+		startingACLnmbr = int(p1[0].MX)
+	elif (config['SETTINGS']["sort_mode"] == "lfu"):
+		startingACLnmbr = int(p1[0].MX)
 elif (config['SETTINGS']["sort_mode"] == "mru"):
-	pass
-
+	startingACLnmbr = 2002000
+	nextACL = -2000
+else:
+	startingACLnmbr = -2000
+	nextACL = 2000
 
 
 ACLcurrIndx = 0		#The index where Router rules end in PenaltyTable e.g. Penalty_Table[ACLcrrIndx] is the latest ACL rule in the router
@@ -222,6 +234,7 @@ def penaltyModule(info, blacklist_var):
 	global AUDIT_LIST
 	global UPDATE_LIST
 	global startingACLnmbr
+	global nextACL
 
 	isInList=None #so I don't have repeats of IP address in Penalty list
 
@@ -230,13 +243,8 @@ def penaltyModule(info, blacklist_var):
 
 	print("penalty")
 
-	ACLruleNum = startingACLnmbr + 2000
+	ACLruleNum = startingACLnmbr + nextACL
 	startingACLnmbr = ACLruleNum
-
-
-
-
-
 
 
 	for var in PENALTY_LIST:
@@ -474,6 +482,8 @@ def expiryLiftModule(ACLrule):
 	serialLock.release()
 
 def sortingModule(sortAlgo):
+
+	#Penalty.objects.all().delete()
 
 	if(sortAlgo == 'mru'):
 		pass
