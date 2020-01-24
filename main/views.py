@@ -39,33 +39,25 @@ serialLock = threading.Semaphore()
 
 p1 = PENALTY_TABLE.annotate(MX=Max('rulenum')).annotate(MN=Min('rulenum'))
 
-MX = Blacklist.objects.all().aggregate(MX=Max('id'))['MX'] or 2000000
-MN = Blacklist.objects.all().aggregate(MN=Min('id'))['MN'] or 0
+MX = Blacklist.objects.all().aggregate(MX=Max('id'))['MX'] or -2000
+MN = Blacklist.objects.all().aggregate(MN=Min('id'))['MN'] or 2002000
 
-print(MX , MN)
-
-if p1:
-	if (config['SETTINGS']["sort_mode"] == "lru"):
-		startingACLnmbr = int(p1[0].MX)
-	elif (config['SETTINGS']["sort_mode"] == "mru"):
-		startingACLnmbr = int(p1[0].MN)
-	elif (config['SETTINGS']["sort_mode"] == "rr"):
-		startingACLnmbr = int(p1[0].MX)
-	elif (config['SETTINGS']["sort_mode"] == "mfu"):
-		startingACLnmbr = int(p1[0].MX)
-	elif (config['SETTINGS']["sort_mode"] == "lfu"):
-		startingACLnmbr = int(p1[0].MX)
-elif (config['SETTINGS']["sort_mode"] == "mru"):
-	startingACLnmbr = 2002000
-	nextACL = -2000
-else:
-	startingACLnmbr = -2000
+if config['SETTINGS']["sort_mode"] in ["lru", "rr","mfu", "lfu"]:
+	startingACLnmbr = MX
 	nextACL = 2000
+elif (config['SETTINGS']["sort_mode"] == "mru"):
+	startingACLnmbr = MN
+	nextACL = -2000
 
 
 ACLcurrIndx = 0		#The index where Router rules end in PenaltyTable e.g. Penalty_Table[ACLcrrIndx] is the latest ACL rule in the router
 	
 i=13
+
+#Blacklist deleting
+
+#Blacklist.objects.all().delete()
+
 
 #Blacklist addition
 
@@ -484,23 +476,46 @@ def expiryLiftModule(ACLrule):
 	serialLock.release()
 
 def sortingModule(sortAlgo):
+	global PENALTY_TABLE
+	global startingACLnmbr
+	global nextACL
 
-	#Penalty.objects.all().delete()
+	Penalty.objects.all().delete()
+	PENALTY_TABLE = Penalty.objects.all()
 
-	if(sortAlgo == 'mru'):
-		pass
+	if sortAlgo in ['lru','rr','mfu','lfu']:
+		startingACLnmbr = -2000
+		nextACL = 2000
+	elif sortAlgo == 'mru':
+		startingACLnmbr = 2002000
+		nextACL = -2000
 
-	if(sortAlgo == 'lru'):
-		pass
+	print("Attempting Lift")
+	serialLock.acquire()
+	ser = serial.Serial('COM5')
+	ser.write(b"\n")
+	ser.write(b"enable\n")
+	ser.write(b"configure terminal\n")
 
-	if(sortAlgo == 'rr'):
-		pass
 
-	if(sortAlgo == 'mfu'):
-		pass
+	ser.write(b"int fa0/1\n")
+	ser.write(b"no ip access-group blacklist in\n")
+	ser.write(b"exit\n")
+
+	ser.write(b"no ip access-list extended blacklist\n")
+	ser.write(b"ip access-list extended blacklist\n")
+	ser.write(b"no sh\n")
+	ser.write(b"exit\n")
 	
-	if(sortAlgo == 'lfu'):
-		pass
+	ser.write(b"int fa0/1\n")
+	ser.write(b"ip access-group blacklist in\n")
+
+	ser.write(b"exit\n")
+	ser.write(b"exit\n")
+	
+	ser.close()
+
+	serialLock.release()
 	
 
 #==============================Running Django============================================================
