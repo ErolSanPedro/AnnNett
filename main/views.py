@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from threading import Thread,Condition
 from django.utils.timezone import now
 from django.core import serializers
-from django.db.models import Max
+from django.db.models import Max , Min
 from datetime import datetime
 from scapy.all import *
 from .models import *
@@ -39,8 +39,10 @@ serialLock = threading.Semaphore()
 
 p1 = PENALTY_TABLE.annotate(MX=Max('rulenum')).annotate(MN=Min('rulenum'))
 
+MX = Blacklist.objects.all().aggregate(MX=Max('id'))['MX'] or 2000000
+MN = Blacklist.objects.all().aggregate(MN=Min('id'))['MN'] or 0
 
-print(p1[0].MX p1[0].MN)
+print(MX , MN)
 
 if p1:
 	if (config['SETTINGS']["sort_mode"] == "lru"):
