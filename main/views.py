@@ -35,6 +35,7 @@ PENALTY_LIST = []	#To be used to stack the database update calls
 AUDIT_LIST = []		#To be used to stack the database update calls
 UPDATE_LIST = []	#List of alrdy existing penalty that needs "status" to be changed
 RULENUM_LIST = []
+IP_LIST = []
 
 
 serialLock = threading.Semaphore()
@@ -42,19 +43,23 @@ serialLock = threading.Semaphore()
 for var in PENALTY_TABLE:
 	RULENUM_LIST.append(var.id)
 
+for var in BLACKLIST_TABLE:
+	IP_LIST.append(var.ipaddress)
+
 p1 = PENALTY_TABLE.annotate(MX=Max('rulenum')).annotate(MN=Min('rulenum'))
 
 
 
-MX = Penalty.objects.all().aggregate(MX=Max('rulenum'))['MX'] or -2000
-MN = Penalty.objects.all().aggregate(MN=Min('rulenum'))['MN'] or 2002000
+MX = Penalty.objects.all().aggregate(MX=Max('rulenum'))['MX'] or 0
+MN = Penalty.objects.all().aggregate(MN=Min('rulenum'))['MN'] or 2000000
 
 if config['SETTINGS']["sort_mode"] in ["lru", "rr","mfu", "lfu"]:
-	startingACLnmbr = MX
 	nextACL = 2000
+	startingACLnmbr = MX + nextACL
+	
 elif (config['SETTINGS']["sort_mode"] == "mru"):
-	startingACLnmbr = MN
 	nextACL = -2000
+	startingACLnmbr = MN + nextACL
 
 
 ACLcurrIndx = 0		#The index where Router rules end in PenaltyTable e.g. Penalty_Table[ACLcrrIndx] is the latest ACL rule in the router
@@ -165,11 +170,12 @@ def parseModule(pkt):
 		# ntwk_info = network_infoV2( pkt[IP].src, pkt[IP].dst, pkt[IP].dport, pkt[Ether].src)
 		ntwk_info = network_info( pkt[IP].src, pkt[IP].dst, pkt[Ether].src)
 
-
-		if ntwk_info.dest_IP == '192.168.1.2':
-		# 172.217.17.132
-			print("Verifying")
-			verificationModule(ntwk_info)
+		if ntwk_info.dest_IP == '103.231.241.180':
+			print('103.231.241.180')
+		# if ntwk_info.dest_IP == '172.217.17.132':
+		# # 172.217.17.132
+		# print("Verifying")
+		verificationModule(ntwk_info)
 
 
 def verificationModule(info):
@@ -177,9 +183,6 @@ def verificationModule(info):
 	global PENALTY_TABLE
 	global AUDIT_TABLE
 	global AUDIT_LIST
-
-
-	####TENTATIVE
 
 	for var in PENALTY_TABLE:
 		for blkListVar in BLACKLIST_TABLE:
@@ -199,35 +202,24 @@ def verificationModule(info):
 					#Needs new status
 					###Can just skip to penaltyModule
 					blacklistModule(info)
-	print("Packet found")
-	#=====================================Causes HANDSHAKE to be recorded?========================================
 
-	hndShakeCnt=0
 
-	for var in PENALTY_LIST:
-		for blkListVar in BLACKLIST_TABLE:
-			if (var.id_blacklist == blkListVar):
-				if hndShakeCnt == 0:
-					if blkListVar.ipaddress == info.dest_IP:
-						addToAudit(info)
-						hndShakeCnt = 1
-					else:
-						return
 
 	#End of Table, could be a new penalty
 	blacklistModule(info)
 
 def blacklistModule(info):
-	global BLACKLIST_TABLE
+	global IP_LIST
 
-	for var in BLACKLIST_TABLE:
-		if var.ipaddress == info.dest_IP:
-			#ITS a Blacklisted IP!!!
-			penaltyModule(info, var)
+	if info.dest_IP in IP_LIST:
+		print('blacklist')
+		#ITS a Blacklisted IP!!!
+		penaltyModule(info, var)
 
 
 def penaltyModule(info, blacklist_var):
 	global BLACKLIST_TABLE
+	global IP_LIST
 	global PENALTY_TABLE
 	global PENALTY_LIST
 	global RULENUM_LIST
@@ -243,58 +235,61 @@ def penaltyModule(info, blacklist_var):
 
 	#************Why do I have Penalty List and Table as separate?
 
-	print("penalty")
-
-	ACLruleNum = startingACLnmbr + nextACL
-	startingACLnmbr = ACLruleNum
+	ACLruleNum = startingACLnmbr
 
 	if config['SETTINGS']["sort_mode"] == 'rr': 
+		print("Random Replacement Mode")
 		nextACL = 2000*random.randint(1, 2000)
 		while nextACL in RULENUM_LIST:
 			nextACL = 2000*random.randint(1, 2000)
 		RULENUM_LIST.append(nextACL)
 
 
-	for var in PENALTY_LIST:
+	for var in PENALTY_TABLE:
 		for blkListVar in BLACKLIST_TABLE:
 			if blkListVar == var.id_blacklist: 
-				if blkListVar.ipaddress == info.dest_IP:
+				if (blkListVar.ipaddress == info.dest_IP) and (var.status != 'blocked'):
 				#Just needs to update status and rulenum
+					print("old penalty")
+					var.id = var.id
 					var.lastaccessed = now()	
 					var.penaltycount = var.penaltycount + 1
 					var.status = "blocked"
-
 					UPDATE_LIST.append(var)
 					addToAudit(info)
-
 					#expiryLiftModule(info)
-
 					ACLConfigModule(info, var.rulenum)#***************************** Will this exit back to here?
-	
+					
+
 	#============NEW PENALTY================
+
+	for var in PENALTY_TABLE:
+		for blkListVar in BLACKLIST_TABLE:
+			if blkListVar == var.id_blacklist:
+				if blkListVar.ipaddress == info.dest_IP:
+					isInList = 1
 
 	for var in PENALTY_LIST:
 		for blkListVar in BLACKLIST_TABLE:
-			if blkListVar == var.id_blacklist: 
+			if blkListVar == var.id_blacklist:
 				if blkListVar.ipaddress == info.dest_IP:
-						isInList = 0
+					isInList = 1
 
 	#Conditions so we don't have repeating IP addresses
 
 	if isInList is None:
-
+		print("new penalty")
 		new_penalty= Penalty(id_blacklist= blacklist_var,
 							lastaccessed= now(), 
 							penaltycount= 1,
 							rulenum= ACLruleNum,
 							status= 'blocked')
 
-
-
 		PENALTY_LIST.append(new_penalty)
 
 		addToAudit(info)
 		ACLConfigModule(info, ACLruleNum)
+		startingACLnmbr = ACLruleNum + nextACL
 
 
 def addToAudit(info):
@@ -308,6 +303,9 @@ def addToAudit(info):
 
 #@background?
 def ACLConfigModule(info, rulenum):
+	
+
+	return
 	# Adds to the router as soon as it receives a packet that is blacklisted. We are focusing on maximum security
 
 	#alternate variation is we can run as an asynchronous thread that runs while true, so that we don't keep opening 
@@ -350,7 +348,7 @@ def ACLConfigModule(info, rulenum):
 
 def main():
 	print("starting")
-	sniff(iface='Realtek PCIe GBE Family Controller', prn=parseModule, count = 0, store=0)
+	sniff(iface='Intel(R) Dual Band Wireless-AC 3165', prn=parseModule, count = 0, store=0)
 
 #wifi name
 #Intel(R) Dual Band Wireless-AC 3165
@@ -408,6 +406,7 @@ def updateModule():
 		if (((int(adminConfig['reset_time'])*86400)%int(now().timestamp())) == 0):
 			for var in PENALTY_TABLE:
 				if( var.status is not 'archived'):
+					var.id = var.id
 					var.status = 'archived'
 					UPDATE_LIST.append(var)
 
@@ -427,11 +426,12 @@ def updateModule():
 		#PENALTY TIME
 		for var in PENALTY_TABLE:
 			if var.status == 'blocked':
-				print((((int(adminConfig['base_penalty_time'])*60)*(var.penaltycount))+var.lastaccessed.timestamp()))
-				print(int(now().timestamp()))
+				# print((((int(adminConfig['base_penalty_time'])*60)*(var.penaltycount))+var.lastaccessed.timestamp()))
+				# print(int(now().timestamp()))
 
-				print( int(now().timestamp()) - (((int(adminConfig['base_penalty_time'])*60)*(var.penaltycount))+var.lastaccessed.timestamp()))
+				# print( int(now().timestamp()) - (((int(adminConfig['base_penalty_time'])*60)*(var.penaltycount))+var.lastaccessed.timestamp()))
 				if (((int(adminConfig['base_penalty_time'])*60)*(var.penaltycount))+var.lastaccessed.timestamp()) <= int(now().timestamp()):
+					var.id = var.id
 					var.status = 'inactive'
 					expiryLiftModule(var)
 					UPDATE_LIST.append(var)
@@ -440,6 +440,7 @@ def updateModule():
 		if ( (len(UPDATE_LIST)>=arraySize) or ( timer == 0 )):
 			if((len(UPDATE_LIST)>=arraySize)):
 				print("inside3")
+				print(UPDATE_LIST)
 				Penalty.objects.bulk_update(UPDATE_LIST, ['lastaccessed','status','penaltycount'], arraySize)
 				PENALTY_TABLE = Penalty.objects.all()
 				del UPDATE_LIST[:arraySize]
@@ -461,7 +462,7 @@ def updateModule():
 		time.sleep(0.4)			
 
 def expiryLiftModule(ACLrule):
-	
+	return
 	print("Attempting Lift")
 	serialLock.acquire()
 	ser = serial.Serial('COM5')
@@ -498,10 +499,10 @@ def sortingModule(sortAlgo):
 	PENALTY_TABLE = Penalty.objects.all()
 
 	if sortAlgo in ['lru','rr','mfu','lfu']:
-		startingACLnmbr = -2000
+		startingACLnmbr = 0
 		nextACL = 2000
 	elif sortAlgo == 'mru':
-		startingACLnmbr = 2002000
+		startingACLnmbr = 2000000
 		nextACL = -2000
 
 	print("Attempting Delete")
