@@ -249,10 +249,9 @@ def penaltyModule(info, blacklist_var):
 	startingACLnmbr = ACLruleNum
 
 	if config['SETTINGS']["sort_mode"] == 'rr': 
-		randNum = random.randint(1, 2000)
-		while (randNum*2000) in RULENUM_LIST:
-			randNum = random.randint(1, 2000)
-		nextACL = randNum*2000
+		nextACL = 2000*random.randint(1, 2000)
+		while nextACL in RULENUM_LIST:
+			nextACL = 2000*random.randint(1, 2000)
 		RULENUM_LIST.append(nextACL)
 
 
