@@ -10,6 +10,7 @@ from .models import *
 import configparser
 import threading
 import serial
+import random
 import json
 import re
 
@@ -33,11 +34,17 @@ LIFT_LIST = [] 		#Lift LIST to be used by Expiry Lift Module
 PENALTY_LIST = []	#To be used to stack the database update calls
 AUDIT_LIST = []		#To be used to stack the database update calls
 UPDATE_LIST = []	#List of alrdy existing penalty that needs "status" to be changed
+RULENUM_LIST = []
+
 
 serialLock = threading.Semaphore()
 
+for var in PENALTY_TABLE:
+	RULENUM_LIST.append(var.id)
 
 p1 = PENALTY_TABLE.annotate(MX=Max('rulenum')).annotate(MN=Min('rulenum'))
+
+
 
 MX = Penalty.objects.all().aggregate(MX=Max('rulenum'))['MX'] or -2000
 MN = Penalty.objects.all().aggregate(MN=Min('rulenum'))['MN'] or 2002000
@@ -223,12 +230,13 @@ def penaltyModule(info, blacklist_var):
 	global BLACKLIST_TABLE
 	global PENALTY_TABLE
 	global PENALTY_LIST
-
+	global RULENUM_LIST
 	global LIFT_LIST
 	global AUDIT_LIST
 	global UPDATE_LIST
 	global startingACLnmbr
 	global nextACL
+	global config
 
 	isInList=None #so I don't have repeats of IP address in Penalty list
 
@@ -239,6 +247,13 @@ def penaltyModule(info, blacklist_var):
 
 	ACLruleNum = startingACLnmbr + nextACL
 	startingACLnmbr = ACLruleNum
+
+	if config['SETTINGS']["sort_mode"] == 'rr': 
+		randNum = random.randint(1, 2000)
+		while (randNum*2000) in RULENUM_LIST:
+			randNum = random.randint(1, 2000)
+		nextACL = randNum*2000
+		RULENUM_LIST.append(nextACL)
 
 
 	for var in PENALTY_LIST:
@@ -490,7 +505,7 @@ def sortingModule(sortAlgo):
 		startingACLnmbr = 2002000
 		nextACL = -2000
 
-	print("Attempting Lift")
+	print("Attempting Delete")
 	serialLock.acquire()
 	ser = serial.Serial('COM5')
 	ser.write(b"\n")
