@@ -39,8 +39,8 @@ serialLock = threading.Semaphore()
 
 p1 = PENALTY_TABLE.annotate(MX=Max('rulenum')).annotate(MN=Min('rulenum'))
 
-MX = Blacklist.objects.all().aggregate(MX=Max('id'))['MX'] or -2000
-MN = Blacklist.objects.all().aggregate(MN=Min('id'))['MN'] or 2002000
+MX = Penalty.objects.all().aggregate(MX=Max('rulenum'))['MX'] or -2000
+MN = Penalty.objects.all().aggregate(MN=Min('rulenum'))['MN'] or 2002000
 
 if config['SETTINGS']["sort_mode"] in ["lru", "rr","mfu", "lfu"]:
 	startingACLnmbr = MX
