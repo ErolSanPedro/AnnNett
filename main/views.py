@@ -370,8 +370,7 @@ def penaltyModule(info, blacklist_var):
 
 					UPDATE_LIST.append(var)
 					addToAudit(info)
-					#expiryLiftModule(info)
-					ACLConfigModule(info, var.rulenum)#***************************** Will this exit back to here?
+					ACLConfigModule(info, var.rulenum)
 					
 
 	#============NEW PENALTY================
@@ -551,8 +550,6 @@ def nextACL(sortMode,oldACL):
 #@background?
 def ACLConfigModule(info, rulenum):
 	
-
-	return
 	# Adds to the router as soon as it receives a packet that is blacklisted. We are focusing on maximum security
 
 	#alternate variation is we can run as an asynchronous thread that runs while true, so that we don't keep opening 
@@ -718,7 +715,7 @@ def updateModule():
 		time.sleep(0.4)			
 
 def expiryLiftModule(ACLrule):
-	return
+
 	print("Attempting Lift")
 	serialLock.acquire()
 	ser = serial.Serial('COM5')
@@ -761,8 +758,6 @@ def sortingModule(sortAlgo):
 		startingACLnmbr = 1998000
 	elif sortAlgo == 'mfu':
 		startingACLnmbr = 1996000
-
-	return
 
 	print("Attempting Delete")
 	serialLock.acquire()
