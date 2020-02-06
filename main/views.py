@@ -3,7 +3,7 @@ from django.http import HttpResponse
 from threading import Thread,Condition
 from django.utils.timezone import now
 from django.core import serializers
-from django.db.models import Max , Min
+from django.db.models import Max , Min, Q
 from datetime import datetime
 from scapy.all import *
 from .models import *
@@ -36,33 +36,126 @@ AUDIT_LIST = []		#To be used to stack the database update calls
 UPDATE_LIST = []	#List of alrdy existing penalty that needs "status" to be changed
 RULENUM_LIST = []
 IP_LIST = []
-
+ALLRULES_LIST = []
 
 serialLock = threading.Semaphore()
 
-for var in PENALTY_TABLE:
-	RULENUM_LIST.append(var.id)
+
+# for var in PENALTY_TABLE:
+# 	RULENUM_LIST.append(var.rulenum)
+
+RULENUM_LIST = list(PENALTY_TABLE.filter(status='blocked').values_list('rulenum', flat=True))
+
+for x in range(0,1000):
+	ALLRULES_LIST.append(x*2000)
 
 for var in BLACKLIST_TABLE:
 	IP_LIST.append(var.ipaddress)
 
-p1 = PENALTY_TABLE.annotate(MX=Max('rulenum')).annotate(MN=Min('rulenum'))
+rulesList = ALLRULES_LIST.copy()
+
+MX = PENALTY_TABLE.aggregate(MX=Max('rulenum'))['MX'] or 0
+MN = PENALTY_TABLE.aggregate(MN=Min('rulenum'))['MN'] or 1998000
+MRUq = list(PENALTY_TABLE.filter( Q(status='archived') | Q(status='inactive')).order_by('status', 'lastaccessed').values_list('rulenum', flat=True))
+LRUq = list(PENALTY_TABLE.filter( Q(status='archived') | Q(status='inactive')).order_by('status', '-lastaccessed').values_list('rulenum', flat=True))
+LFU = PENALTY_TABLE.filter(penaltycount=1).aggregate(MX=Max('rulenum'))['MX'] or -1
+MFU = PENALTY_TABLE.filter(penaltycount=1).aggregate(MN=Max('rulenum'))['MN'] or 1995999
+
+MRU_filtered = []
+LRU_filtered = []
+
+print(RULENUM_LIST)
+
+for x in ALLRULES_LIST:
+	if x in RULENUM_LIST:
+		rulesList.remove(x)
+rulesList.sort()
+emptyMRU = rulesList[0]
+rulesList.sort(reverse = True)
+emptyLRU = rulesList[0]
+
+for x in MRUq:
+	if x not in RULENUM_LIST:
+		MRU_filtered.append(x)
+	
+for x in LRUq:
+	if x not in RULENUM_LIST:
+		LRU_filtered.append(x)
+
+#print('start_mru list2 -' + str(MRU_filtered))
+#print('start_lru list2 -' + str(LRU_filtered))
 
 
+if MRU_filtered:
+	MRU = int(MRU_filtered[0])
+else:
+	MRU = MX
+	
+if emptyMRU < MRU:
+	MRU = emptyMRU
 
-MX = Penalty.objects.all().aggregate(MX=Max('rulenum'))['MX'] or 0
-MN = Penalty.objects.all().aggregate(MN=Min('rulenum'))['MN'] or 2000000
+if LRU_filtered:
+	LRU = int(LRU_filtered[0])
+else:
+	LRU = MN
 
-if config['SETTINGS']["sort_mode"] in ["lru", "rr","mfu", "lfu"]:
-	nextACL = 2000
-	startingACLnmbr = MX + nextACL
+if emptyLRU > LRU:
+	LRU = emptyLRU
+
+
+# Its placement is based on insertion. The new penalty is gonna be placed in an order where it can be the first for MRU
+# And for LRU where it can be the least in the router. So it can be that the newest is at the last possible line. 
+
+if config['SETTINGS']["sort_mode"] == 'lru':
+	# nextACL = -2000
+
+	if (MN < LRU and MN != 1998000):
+		startingACLnmbr = LRU
+
+	elif LRU_filtered:
+		if LRU_filtered[0] == MN:
+			startingACLnmbr = MN
+		else:
+			startingACLnmbr = MN - 2000
+	else:
+		startingACLnmbr = MN
 	
 elif (config['SETTINGS']["sort_mode"] == "mru"):
-	nextACL = -2000
-	startingACLnmbr = MN + nextACL
+	# nextACL = 2000
 
+	if (MX > MRU and MX != 0):
+		startingACLnmbr = MRU
 
-ACLcurrIndx = 0		#The index where Router rules end in PenaltyTable e.g. Penalty_Table[ACLcrrIndx] is the latest ACL rule in the router
+	elif MRU_filtered:
+		if MRU_filtered[0] == MX:
+			startingACLnmbr = MX
+		else:
+			startingACLnmbr = MX + 2000	
+	else:	
+		startingACLnmbr = MX
+
+elif (config['SETTINGS']["sort_mode"] == "rr"):
+	
+	if (MX > MRU and MX != 0):
+		startingACLnmbr = MRU
+
+	elif MRU_filtered:
+		if MRU_filtered[0] == MX:
+			startingACLnmbr = MX
+		else:
+			startingACLnmbr = MX + 2000	
+	else:	
+		startingACLnmbr = MX + 2000
+
+elif (config['SETTINGS']["sort_mode"] == "mfu"):
+	startingACLnmbr = MFU + 1
+	
+elif (config['SETTINGS']["sort_mode"] == "lfu"):
+	startingACLnmbr = LFU + 1
+
+#print(startingACLnmbr)
+
+#ACLcurrIndx = 0		#The index where Router rules end in PenaltyTable e.g. Penalty_Table[ACLcrrIndx] is the latest ACL rule in the router
 	
 i=13
 
@@ -171,7 +264,8 @@ def parseModule(pkt):
 		ntwk_info = network_info( pkt[IP].src, pkt[IP].dst, pkt[Ether].src)
 
 		if ntwk_info.dest_IP == '103.231.241.180':
-			print('103.231.241.180')
+			#print('103.231.241.180')
+			pass
 		# if ntwk_info.dest_IP == '172.217.17.132':
 		# # 172.217.17.132
 		# print("Verifying")
@@ -192,7 +286,8 @@ def verificationModule(info):
 					if var.status == 'blocked':
 
 						#AUDIT DB is a complete list of mac addr/src IP that accessed Blacklisted ip addresses
-						addToAudit(info)
+						print('Verifying')
+						#addToAudit(info)
 						
 
 						#Drop Traffic
@@ -209,13 +304,17 @@ def verificationModule(info):
 	blacklistModule(info)
 
 def blacklistModule(info):
-	global IP_LIST
+	#global IP_LIST
+	global BLACKLIST_TABLE
 
-	if info.dest_IP in IP_LIST:
-		print('blacklist')
-		#ITS a Blacklisted IP!!!
-		penaltyModule(info, var)
+	# if info.dest_IP in IP_LIST:
+	# 	print('blacklist')
+	# 	#ITS a Blacklisted IP!!!
+	# 	penaltyModule(info, var)
 
+	for var in BLACKLIST_TABLE:
+		if var.ipaddress == info.dest_IP:
+			penaltyModule(info, var) 
 
 def penaltyModule(info, blacklist_var):
 	global BLACKLIST_TABLE
@@ -227,34 +326,48 @@ def penaltyModule(info, blacklist_var):
 	global AUDIT_LIST
 	global UPDATE_LIST
 	global startingACLnmbr
-	global nextACL
 	global config
 
 	isInList=None #so I don't have repeats of IP address in Penalty list
 
-
-	#************Why do I have Penalty List and Table as separate?
-
-	ACLruleNum = startingACLnmbr
-
-	if config['SETTINGS']["sort_mode"] == 'rr': 
-		print("Random Replacement Mode")
-		nextACL = 2000*random.randint(1, 2000)
-		while nextACL in RULENUM_LIST:
-			nextACL = 2000*random.randint(1, 2000)
-		RULENUM_LIST.append(nextACL)
-
+	ACLruleNum = startingACLnmbr 
+	print('ACLruleNum - '+ str(ACLruleNum))
 
 	for var in PENALTY_TABLE:
 		for blkListVar in BLACKLIST_TABLE:
 			if blkListVar == var.id_blacklist: 
-				if (blkListVar.ipaddress == info.dest_IP) and (var.status != 'blocked'):
+				if (blkListVar.ipaddress == info.dest_IP) and (var.status != 'blocked') and (var not in UPDATE_LIST):
 				#Just needs to update status and rulenum
 					print("old penalty")
+					print(info.dest_IP)
 					var.id = var.id
 					var.lastaccessed = now()	
 					var.penaltycount = var.penaltycount + 1
 					var.status = "blocked"
+
+					if config['SETTINGS']['sort_mode'] == 'mfu':
+						checkACLruleNum = PENALTY_TABLE.filter(penaltycount=var.penaltycount).aggregate(MX=Max('rulenum'))['MX']
+						if checkACLruleNum:
+							ACLruleNum = checkACLruleNum + 1	
+						else:
+							ACLruleNum = 1998000 - (var.penaltycount*2000)
+						
+						var.rulenum = ACLruleNum
+					elif config['SETTINGS']['sort_mode'] == 'lfu':
+						checkACLruleNum = PENALTY_TABLE.filter(penaltycount=var.penaltycount).aggregate(MX=Max('rulenum'))['MX']
+						
+						if checkACLruleNum:
+							ACLruleNum = checkACLruleNum + 1	
+						else:
+							ACLruleNum = (var.penaltycount-1)*2000
+						
+						var.rulenum = ACLruleNum
+					else:
+						var.rulenum = ACLruleNum
+
+					print(checkACLruleNum)
+					startingACLnmbr = nextACL(config['SETTINGS']['sort_mode'], ACLruleNum)
+
 					UPDATE_LIST.append(var)
 					addToAudit(info)
 					#expiryLiftModule(info)
@@ -279,6 +392,8 @@ def penaltyModule(info, blacklist_var):
 
 	if isInList is None:
 		print("new penalty")
+		print(info.dest_IP)
+
 		new_penalty= Penalty(id_blacklist= blacklist_var,
 							lastaccessed= now(), 
 							penaltycount= 1,
@@ -289,7 +404,9 @@ def penaltyModule(info, blacklist_var):
 
 		addToAudit(info)
 		ACLConfigModule(info, ACLruleNum)
-		startingACLnmbr = ACLruleNum + nextACL
+
+		startingACLnmbr = nextACL(config['SETTINGS']['sort_mode'], ACLruleNum)
+		#print('next - ' + str(startingACLnmbr))
 
 
 def addToAudit(info):
@@ -299,6 +416,136 @@ def addToAudit(info):
 	AUDIT_LIST.append(Audit(sourceip= info.src_IP,
 							macaddress= info.src_mac,
 							time= now()))
+
+def nextACL(sortMode,oldACL):
+	
+	global PENALTY_TABLE
+	global PENALTY_LIST
+	global RULENUM_LIST
+	global ALLRULES_LIST
+
+	rulesList = ALLRULES_LIST.copy()
+
+	if oldACL is not None:
+		if oldACL not in RULENUM_LIST:
+			RULENUM_LIST.append(oldACL)
+	
+	for y in PENALTY_LIST:
+		if y.rulenum not in RULENUM_LIST:
+			RULENUM_LIST.append(y.rulenum)
+
+	MRU_filtered = []
+	LRU_filtered = []
+
+	if RULENUM_LIST: 
+		MX = max(RULENUM_LIST)
+		MN = min(RULENUM_LIST)
+	else:
+		MX = 0
+		MN = 1998000
+
+	MRUq = list(PENALTY_TABLE.filter( Q(status='archived') | Q(status='inactive')).order_by('status', 'lastaccessed').values_list('rulenum', flat=True))
+	LRUq = list(PENALTY_TABLE.filter( Q(status='archived') | Q(status='inactive')).order_by('status', '-lastaccessed').values_list('rulenum', flat=True))
+	LFU = PENALTY_TABLE.filter(penaltycount=1).aggregate(MX=Max('rulenum'))['MX'] or -1
+	MFU = PENALTY_TABLE.filter(penaltycount=1).aggregate(MX=Max('rulenum'))['MX'] or 1995999
+
+	if PENALTY_LIST:
+		for v in PENALTY_LIST:
+			if v.rulenum > LFU:
+				LFU = v.rulenum
+			if v.rulenum > MFU:
+				MFU = v.rulenum
+
+	#print("starting nextACL" + str(RULENUM_LIST))
+	#print(oldACL)
+	#print("rulesList - " + str(rulesList[:5]))
+
+	intRULENUM_LIST = list(map(int, RULENUM_LIST))
+
+	#print("if {}".format(intRULENUM_LIST))
+
+	for x in ALLRULES_LIST:
+		if x in intRULENUM_LIST:
+			print("removing {}".format(x))
+			rulesList.remove(x)
+
+	rulesList.sort()
+	emptyMRU = rulesList[0]
+	#print("rulesList - " + str(rulesList[:5]))
+
+	rulesList.sort(reverse = True)
+	emptyLRU = rulesList[0]
+
+	#print("rulesListR - " + str(rulesList[:5]))
+	#print(MX, MN)
+
+	#print('lru list -' + str(LRUq))
+
+	for x in MRUq:
+		if x not in RULENUM_LIST:
+			MRU_filtered.append(x)
+		
+	for x in LRUq:
+		if x not in RULENUM_LIST:
+			LRU_filtered.append(x)
+
+	#print('mru list2 -' + str(MRU_filtered))
+	#print('lru list2 -' + str(LRU_filtered))
+
+	if MRU_filtered:
+		MRU = int(MRU_filtered[0])
+	elif MX not in RULENUM_LIST:
+		MRU = MX
+	else:
+		MRU = emptyMRU
+
+	if emptyMRU < MRU:
+		MRU = emptyMRU
+
+	if LRU_filtered:
+		LRU = int(LRU_filtered[0])
+	elif MN not in RULENUM_LIST:
+		LRU = MN
+	else:
+		LRU = emptyLRU
+
+	if emptyLRU > LRU:
+		LRU = emptyLRU
+		
+
+	print(sortMode + " Mode")
+
+	if sortMode == 'rr':
+		newACL = 2000*random.randint(1, 2000)
+		while newACL in RULENUM_LIST:
+			newACL = 2000*random.randint(1, 2000)
+
+	if sortMode == 'mru':
+		newACL = MRU
+			
+		# if (MX >= MRU and MX != 0):
+		# 	newACL = MRU
+
+		# elif MRU_filtered:
+		# 	if MRU_filtered[0] == MX:
+		# 		newACL = MX
+		# 	else:
+		# 		newACL = MX + 2000
+		# else:
+		# 	newACL = MX
+	if sortMode == 'lru':
+		newACL = LRU
+
+	if sortMode == 'mfu':
+		newACL = MFU + 1
+
+	if sortMode == 'lfu':
+		newACL = LFU + 1
+
+	#print("new {} \n{}".format(newACL, RULENUM_LIST))
+
+	return newACL
+
 
 
 #@background?
@@ -383,6 +630,9 @@ def updateModule():
 	global PENALTY_TABLE
 	global AUDIT_TABLE
 
+	global RULENUM_LIST
+	global startingACLnmbr
+
 	while True:
 		timer = int(now().timestamp())%(int(adminConfig['auto_lift_timer']))
 		arraySize = int(adminConfig['lift_array_size'])
@@ -433,22 +683,28 @@ def updateModule():
 				if (((int(adminConfig['base_penalty_time'])*60)*(var.penaltycount))+var.lastaccessed.timestamp()) <= int(now().timestamp()):
 					var.id = var.id
 					var.status = 'inactive'
+					if var.rulenum in RULENUM_LIST:
+						RULENUM_LIST.remove(var.rulenum)
 					expiryLiftModule(var)
 					UPDATE_LIST.append(var)
 
 
 		if ( (len(UPDATE_LIST)>=arraySize) or ( timer == 0 )):
+			
 			if((len(UPDATE_LIST)>=arraySize)):
 				print("inside3")
-				print(UPDATE_LIST)
-				Penalty.objects.bulk_update(UPDATE_LIST, ['lastaccessed','status','penaltycount'], arraySize)
+				Penalty.objects.bulk_update(UPDATE_LIST, ['lastaccessed','status','penaltycount','rulenum'], arraySize)
 				PENALTY_TABLE = Penalty.objects.all()
 				del UPDATE_LIST[:arraySize]
 			elif (timer == 0) and (len(UPDATE_LIST) is not 0):
-				Penalty.objects.bulk_update(UPDATE_LIST, ['lastaccessed','status','penaltycount'], len(UPDATE_LIST))
+				print('Updating - {}'.format(RULENUM_LIST))
+
+				Penalty.objects.bulk_update(UPDATE_LIST, ['lastaccessed','status','penaltycount','rulenum'], len(UPDATE_LIST))
 				PENALTY_TABLE = Penalty.objects.all()
+				RULENUM_LIST = list(PENALTY_TABLE.filter(status='blocked').values_list('rulenum', flat=True))
 				del UPDATE_LIST[:len(UPDATE_LIST)]
-		
+				print('Updated - {}'.format(RULENUM_LIST))
+				startingACLnmbr = nextACL(config['SETTINGS']['sort_mode'], None)
 
 		#================DELETING ACL RULES=========================
 
@@ -492,18 +748,21 @@ def expiryLiftModule(ACLrule):
 
 def sortingModule(sortAlgo):
 	global PENALTY_TABLE
+	global RULENUM_LIST
 	global startingACLnmbr
-	global nextACL
 
 	Penalty.objects.all().delete()
 	PENALTY_TABLE = Penalty.objects.all()
+	RULENUM_LIST = []
 
-	if sortAlgo in ['lru','rr','mfu','lfu']:
+	if sortAlgo in ['mru','rr','lfu']:
 		startingACLnmbr = 0
-		nextACL = 2000
-	elif sortAlgo == 'mru':
-		startingACLnmbr = 2000000
-		nextACL = -2000
+	elif sortAlgo == 'lru':
+		startingACLnmbr = 1998000
+	elif sortAlgo == 'mfu':
+		startingACLnmbr = 1996000
+
+	return
 
 	print("Attempting Delete")
 	serialLock.acquire()

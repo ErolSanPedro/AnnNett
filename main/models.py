@@ -27,8 +27,8 @@ class Penalty(models.Model):
 	rulenum = models.IntegerField(null = True, default = 0)
 	status = models.CharField(max_length = 45)
 
-	def __str__(self):
-		return self.ipaddress
+	def __int__(self):
+		return self.id
 
 class Audit(models.Model):
 	id = models.AutoField(primary_key=True)
