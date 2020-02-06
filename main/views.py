@@ -340,6 +340,7 @@ def penaltyModule(info, blacklist_var):
 				#Just needs to update status and rulenum
 					print("old penalty")
 					print(info.dest_IP)
+					checkACLruleNum = None
 					var.id = var.id
 					var.lastaccessed = now()	
 					var.penaltycount = var.penaltycount + 1
@@ -364,8 +365,9 @@ def penaltyModule(info, blacklist_var):
 						var.rulenum = ACLruleNum
 					else:
 						var.rulenum = ACLruleNum
-
-					print(checkACLruleNum)
+					
+					if checkACLruleNum:
+						print(checkACLruleNum)
 					startingACLnmbr = nextACL(config['SETTINGS']['sort_mode'], ACLruleNum)
 
 					UPDATE_LIST.append(var)
