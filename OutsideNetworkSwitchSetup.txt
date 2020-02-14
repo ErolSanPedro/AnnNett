@@ -15,7 +15,7 @@ exit
 
 int fa0/1
 switchport mode trunk
-no shs
+no sh
 exit
 
 int fa0/2
