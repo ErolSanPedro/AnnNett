@@ -514,7 +514,7 @@ def nextACL(sortMode,oldACL):
 	#print(sortMode + " Mode")
 
 	if sortMode == 'rr':
-		newACL = 2000*random.randint(1, 999) #change from 2000 kasi alam ko 2m lang max natin dba, 999 kasi if 1k maooverwrite yung 2m na permit any any
+		newACL = 2000*random.randint(1, 999) #change from 1000
 		while newACL in RULENUM_LIST:
 			newACL = 2000*random.randint(1, 999)
 
