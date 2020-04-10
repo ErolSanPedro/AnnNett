@@ -573,7 +573,6 @@ def ACLConfigModule(p_info, b_info):
 	command = str(p_info.rulenum) + " deny tcp host " + str(b_info.ipaddress) + " any eq " + str(b_info.port)
 	print("[" + str(datetime.now().time().replace(microsecond=0)) + "] " + command)
 
-	# NO NEED TO DO THIS! 2m lagn naman talaga max natin bakit kelangan iusog usog? kasi pag laging ginaganito, yung kasunod na rule maooverwrite
 	# command = "{} permit icmp any any ".format((rulenum + 2000)) #note that any any should always be the last
 	# print(command + str(datetime.now().time()))
 
